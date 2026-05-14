@@ -1,0 +1,35 @@
+﻿<Window x:Class="PWN_Simulator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PWN_Simulator"
+        xmlns:vm="clr-namespace:PWN_Simulator.ViewModel"
+        mc:Ignorable="d"
+        Title="PWN_Simulator" Height="450" Width="800">
+    <Window.DataContext>
+        <vm:MainViewModel x:Name="ViewModel"/>
+    </Window.DataContext>
+    <StackPanel Margin="20">
+        <TextBlock Text="股票代碼：" />
+        <TextBox x:Name="TxtSymbol" Text="0050.TW" Margin="0,5"/>
+
+        <Button Content="查詢資產概況" Click="BtnRefresh_Click" Margin="0,10" Height="30"/>
+
+        <Border BorderBrush="LightGray" BorderThickness="1" Padding="15" CornerRadius="5">
+            <StackPanel>
+                <TextBlock Text="目前持有股數：" Foreground="Gray"/>
+                <!-- 綁定到 Portfolio 物件的 CurrentHoldings 屬性 -->
+                <TextBlock Text="{Binding Portfolio.CurrentHoldings}" FontSize="24" FontWeight="Bold"/>
+
+                <TextBlock Text="目前總市值：" Margin="0,10,0,0" Foreground="Gray"/>
+                <!-- 綁定到最新市值 -->
+                <TextBlock Text="{Binding Portfolio.TotalMarketValue, StringFormat={}{0:C0}}" 
+                           FontSize="32" Foreground="Green" FontWeight="Bold"/>
+
+                <TextBlock Text="{Binding Portfolio.LastUpdated, StringFormat='最後更新：{0:yyyy/MM/dd HH:mm}'}" 
+                           FontSize="10" Foreground="DimGray" Margin="0,10,0,0"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</Window>

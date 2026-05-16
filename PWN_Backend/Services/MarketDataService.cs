@@ -1,8 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NodaTime;
+using OpenAI.Responses;
 using PWN_Backend.Data;
 using PWN_Backend.Models;
 using PWN_Backend.Models.Entites;
+using System.Text;
 using YahooFinanceApi;
 using YahooQuotesApi;
 
@@ -21,43 +23,67 @@ namespace PWN_Backend.Services
             _logger = logger;   // 這裡的 logger 也是自動傳進來的，讓你可以寫 Log
         }
 
-        public async Task<bool> SyncStockPriceAsync(string stockSymbol = "0050.TW")
+        public async Task<bool> SyncStockPriceAsync(string stockSymbol )
         {
             try
             {
-                _logger.LogInformation("開始執行 {Symbol} 同步任務...", stockSymbol);
+                _logger.LogInformation("開始執行 {Symbol} 同步任務(connect with TWStock...", stockSymbol);
+
+                if (string.IsNullOrWhiteSpace(stockSymbol))
+                    throw new ArgumentException("股票代碼不能為空", nameof(stockSymbol));
+               
+                stockSymbol = stockSymbol.Trim().ToUpper();
 
                 using var client = new HttpClient();
-                // 偽裝瀏覽器標頭，降低被封鎖機率
-                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-                client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
+                string url = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AVG_ALL";
+                var stockList = await client.GetFromJsonAsync<List<TwseStockInfo>>(url);
 
-                // 設定時間區間 (最近 7 天)
-                long start = (long)(DateTime.UtcNow.AddDays(-7) - DateTime.UnixEpoch).TotalSeconds;
-                long end = (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds;
-                string url = $"https://query1.finance.yahoo.com/v7/finance/download/{stockSymbol}?period1={start}&period2={end}&interval=1d&events=history&includeAdjustedClose=true";
-
-                var response = await client.GetAsync(url);
-
-                if (response.IsSuccessStatusCode)
+                if (stockList != null && stockList.Count > 0)
                 {
-                    var csvContent = await response.Content.ReadAsStringAsync();
-                    var rows = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-                    if (rows.Length >= 2)
+                    var targetStock = stockList.FirstOrDefault(s => s.Code == stockSymbol);
+                    if (targetStock != null && !string.IsNullOrEmpty(targetStock.ClosingPrice))
                     {
-                        var lastRow = rows[^1].Split(',');
-                        var tradeDate = DateTime.Parse(lastRow[0]);
-                        var adjClose = decimal.Parse(lastRow[5]);
-
-                        await SaveToDatabase(stockSymbol, tradeDate, adjClose);
-                        _logger.LogInformation("成功從 Yahoo Finance 獲取真實數據。");
+                        if (!decimal.TryParse(targetStock.ClosingPrice, out decimal price))
+                            throw new Exception($"{stockSymbol} 的 ClosingPrice 格式錯誤：{targetStock.ClosingPrice}");
+                        DateTime tradeDate = DateTime.Today; // TWSE API 沒有提供日期，這裡暫時用今天的日期
+                        await SaveToDatabase(stockSymbol, tradeDate, price);
+                        _logger.LogInformation("成功從 TWSE 獲取真實數據。");
                         return true;
                     }
+                    else
+                        throw new Exception($"在 TWSE API 回傳的資料中找不到 {stockSymbol} 的價格資訊。");
                 }
+                throw   new HttpRequestException("無法從 TWSE API 獲取資料，可能是 API 變動或暫時無法存取。");
+                //// 偽裝瀏覽器標頭，降低被封鎖機率
+                //client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                //client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
+
+                //// 設定時間區間 (最近 7 天)
+                //long start = (long)(DateTime.UtcNow.AddDays(-7) - DateTime.UnixEpoch).TotalSeconds;
+                //long end = (long)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds;
+                //string url = $"https://query1.finance.yahoo.com/v7/finance/download/{stockSymbol}?period1={start}&period2={end}&interval=1d&events=history&includeAdjustedClose=true";
+
+                //var response = await client.GetAsync(url);
+
+                //if (response.IsSuccessStatusCode)
+                //{
+                //    var csvContent = await response.Content.ReadAsStringAsync();
+                //    var rows = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+                //    if (rows.Length >= 2)
+                //    {
+                //        var lastRow = rows[^1].Split(',');
+                //        var tradeDate = DateTime.Parse(lastRow[0]);
+                //        var adjClose = decimal.Parse(lastRow[5]);
+
+                //        await SaveToDatabase(stockSymbol, tradeDate, adjClose);
+                //        _logger.LogInformation("成功從 Yahoo Finance 獲取真實數據。");
+                //        return true;
+                //    }
+                //}
 
                 // 如果執行到這，代表 API 失敗 (401/429) 或解析失敗，進入備援模式
-                throw new HttpRequestException($"外部服務暫時無法存取 (Status: {response.StatusCode})");
+                //throw new HttpRequestException($"外部服務暫時無法存取 (Status: {response.StatusCode})");
             }
             catch (Exception ex)
             {
@@ -72,6 +98,11 @@ namespace PWN_Backend.Services
 
                 return true; // 回傳 true 讓前端流程不中斷
             }
+        }
+
+        private string NormalizationStockSymbol(string stockSymbol)
+        {
+            throw new NotImplementedException();
         }
 
         // 抽取出來的寫入邏輯，保持程式碼整潔

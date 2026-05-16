@@ -16,14 +16,26 @@ namespace PWN_Simulator.Services
         // 呼叫資產概況 API
         public async Task<ProfolioAPIModel?> GetPortfolioAsync(string symbol)
         {
-            return await _client.GetFromJsonAsync<ProfolioAPIModel>($"/api/Transaction/protfolio/{symbol}");
+            return await _client.GetFromJsonAsync<ProfolioAPIModel>($"/api/Transaction/portfolio/{symbol}");
         }
 
-        // 呼叫建立交易 API
-        public async Task<bool> CreateTransactionAsync(TransactionAPIModel dto)
+        //// 呼叫建立交易 API
+        //public async Task<bool> CreateTransactionAsync(TransactionAPIModel dto)
+        //{
+        //    var response = await _client.PostAsJsonAsync("api/Transactions", dto);
+        //    return response.IsSuccessStatusCode;
+        //}
+
+        public async Task<AIChatResponse?> ParseTransactionWithAIAsync(string message)
         {
-            var response = await _client.PostAsJsonAsync("api/Transactions", dto);
-            return response.IsSuccessStatusCode;
+            var request = new AIChatRequest
+            {
+                Reqid = Guid.NewGuid(),
+                Message = message
+            };
+            var response = await _client.PostAsJsonAsync("api/AIChat/parse-transaction", request);
+            return await response.Content.ReadFromJsonAsync<AIChatResponse>();
+
         }
     }
 }

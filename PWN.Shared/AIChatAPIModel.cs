@@ -8,6 +8,7 @@
     public class AIChatRequest
     {
       //  public string UserId { get; set; } = string.Empty;
+        public Guid Reqid { get; set; } = Guid.NewGuid();
         public string Message { get; set; } = string.Empty;
     }
     // AI 解析後的結構化結果
@@ -23,6 +24,7 @@
     //AI 回的內容
     public class AIChatResponse
     {
+        public Guid Reqid { get; set; } = Guid.NewGuid();
         public string Reply { get; set; } = string.Empty;
         public AIParsedResult? ParsedResult { get; set; }
     }

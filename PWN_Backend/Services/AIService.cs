@@ -52,23 +52,24 @@ namespace PWN_Backend.Services
             你是一個專業的股票記帳助理。
             請解析使用者的文字，並嚴格回傳一個 JSON 格式的結果。
             
-            規則：
-            1. Action 必須是 'Buy' 或 'Sell'。
-            2. Symbol 必須是 Yahoo Finance 格式 (例如 0050.TW)。
-            3. Quantity 必須是整數 (張數請乘以 1000)。
-            4. Price 必須是數字。
+           規則：
+1. Action 必須是 'Buy' 或 'Sell'。
+2. Symbol 必須是台股代號格式，例如 0050、2330、0056，不要加 .TW。
+3. Quantity 必須是整數。若使用者輸入「張」，請乘以 1000；若輸入「股」，則照股數。
+4. Price 必須是數字。
+5. 如果無法解析，IsSuccess 請回傳 false。
 
-            範例輸入：昨天買入 2 張 0050 價格 150
-            範例回傳：
-            {
-                ""Action"": ""Buy"",
-                ""Symbol"": ""0050.TW"",
-                ""Quantity"": 2000,
-                ""Price"": 150.0,
-                ""IsSuccess"": true
-            }
+範例輸入：昨天買入 2 張 0050 價格 150
+範例回傳：
+{
+    ""Action"": ""Buy"",
+    ""Symbol"": ""0050"",
+    ""Quantity"": 2000,
+    ""Price"": 150.0,
+    ""IsSuccess"": true
+}
 
-            使用者輸入：{{$input}}";
+使用者輸入：{{$input}}";
 
             try
             {

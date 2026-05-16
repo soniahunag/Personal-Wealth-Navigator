@@ -3,6 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace PWN_Backend.Controllers
 {
+
+    /// <summary>  
+    ///   連接外部市場資料 API 的 Controller，提供手動觸發同步的端點。
+    /// </summary>
+
     [Route("api/[controller]")]
     [ApiController]
     public class MarketDataController : ControllerBase

@@ -49,15 +49,17 @@ namespace PWN_Backend.Services
             // System Prompt 定義了 AI 的「角色」與「行為邊界」。
             // 我們使用「少樣本學習 (Few-Shot)」技術提供範例，增加 AI 的穩定性。
             string prompt = @"
-            你是一個專業的股票記帳助理。
-            請解析使用者的文字，並嚴格回傳一個 JSON 格式的結果。
-            
-           規則：
+你是一個專業的股票記帳助理。
+請解析使用者的文字，並嚴格回傳一個 JSON 格式的結果。
+
+規則：
 1. Action 必須是 'Buy' 或 'Sell'。
 2. Symbol 必須是台股代號格式，例如 0050、2330、0056，不要加 .TW。
 3. Quantity 必須是整數。若使用者輸入「張」，請乘以 1000；若輸入「股」，則照股數。
 4. Price 必須是數字。
-5. 如果無法解析，IsSuccess 請回傳 false。
+5. 如果無法解析價格，Price 請回傳 0，不要回傳 null。
+6. 如果缺少 Action、Symbol、Quantity 或 Price，IsSuccess 請回傳 false。
+7. 請只回傳純 JSON，不要加 ```json，不要加任何解釋文字。
 
 範例輸入：昨天買入 2 張 0050 價格 150
 範例回傳：
@@ -66,7 +68,8 @@ namespace PWN_Backend.Services
     ""Symbol"": ""0050"",
     ""Quantity"": 2000,
     ""Price"": 150.0,
-    ""IsSuccess"": true
+    ""IsSuccess"": true,
+    ""RawAnalysis"": """"
 }
 
 使用者輸入：{{$input}}";
@@ -79,6 +82,7 @@ namespace PWN_Backend.Services
 
                 // result.ToString() 會拿到 AI 回傳的文字內容（預期是 JSON）。
                 var jsonResult = result.ToString();
+                jsonResult = CleanJsonResponse(jsonResult);
 
                 // JsonSerializer：將字串轉回 C# 物件。
                 // PropertyNameCaseInsensitive = true：忽略大小寫差異（防止 AI 回傳 "action" 而不是 "Action"）。
@@ -97,6 +101,33 @@ namespace PWN_Backend.Services
                 // 回傳一個失敗標記的物件，讓前端知道出事了，而不是讓整個 App 當掉。
                 return new AIParsedResult { IsSuccess = false, RawAnalysis = "系統暫時無法解析您的指令。" };
             }
+        }
+
+        private string CleanJsonResponse(string response)
+        {
+            if (string.IsNullOrWhiteSpace(response))
+                return string.Empty;
+
+            response = response.Trim();
+
+            // 清掉開頭 ```json
+            if (response.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+            {
+                response = response.Substring("```json".Length).Trim();
+            }
+            // 清掉開頭 ```
+            else if (response.StartsWith("```"))
+            {
+                response = response.Substring("```".Length).Trim();
+            }
+
+            // 清掉結尾 ```
+            if (response.EndsWith("```"))
+            {
+                response = response.Substring(0, response.Length - "```".Length).Trim();
+            }
+
+            return response;
         }
     }
 }

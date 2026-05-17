@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PWN.Shared;
+using PWN_Backend.Data;
+using PWN_Backend.Models.Entites;
 using PWN_Backend.Services;
 
 namespace PWN_Backend.Controllers
@@ -14,9 +17,12 @@ namespace PWN_Backend.Controllers
     public class TransactionController : ControllerBase
     {
         private readonly MarketDataService _marketDataService;
-        public TransactionController(MarketDataService service, AIService aIService)
+        private readonly ApplicationDbContext _dbContext;
+        public TransactionController(MarketDataService service,ApplicationDbContext dbContext)
         {
             _marketDataService = service;
+            _dbContext = dbContext;
+
         }
         [HttpGet("portfolio/{symbol}")]
         public async Task<IActionResult> GetPortfolio(string symbol)
@@ -38,6 +44,78 @@ namespace PWN_Backend.Controllers
             });
         }
 
+        [HttpPost("create")]
+        public async Task<IActionResult> CreateTransaction([FromBody] TransactionAPIModel dto)
+        {
+            try
+            {
+                if (dto == null)
+                    return BadRequest("Transaction data is required.");
 
+                if (string.IsNullOrWhiteSpace(dto.TransactionType))
+                    return BadRequest("TransactionType is required.");
+
+                if (dto.TransactionType != "Buy" && dto.TransactionType != "Sell")
+                    return BadRequest("TransactionType must be Buy or Sell.");
+
+                if (string.IsNullOrWhiteSpace(dto.Symbol))
+                    return BadRequest("Symbol is required.");
+
+                if (dto.Quantity <= 0)
+                    return BadRequest("Quantity must be greater than zero.");
+
+                if (dto.Price <= 0)
+                    return BadRequest("Price must be greater than zero.");
+
+                var now = DateTime.Now;
+                var amount = dto.Quantity * dto.Price;
+
+                var transaction = new Transaction
+                {
+                    Type = dto.TransactionType,
+                    Amount = amount,
+                    Category = "Stock",
+                    TxnDate = DateTime.Now,
+                    Note = string.IsNullOrWhiteSpace(dto.Note)
+                        ? $"AI parsed stock transaction: {dto.TransactionType} {dto.Quantity} shares of {dto.Symbol} at {dto.Price}"
+                        : dto.Note,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    UserId = "demo-user",
+                    Symbol = dto.Symbol.Trim(),
+                    Quantity = dto.Quantity,
+                    Price = dto.Price
+                };
+
+                _dbContext.Transactions.Add(transaction);
+                await _dbContext.SaveChangesAsync();
+
+                await _marketDataService.SyncStockPriceAsync(dto.Symbol);
+
+                return Ok(new
+                {
+                    Message = "Transaction created successfully.",
+                    Data = new
+                    {
+                        transaction.Id,
+                        transaction.Type,
+                        transaction.Symbol,
+                        transaction.Quantity,
+                        transaction.Price,
+                        transaction.Amount,
+                        transaction.TxnDate
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = "Create transaction failed.",
+                    Error = ex.Message,
+                    InnerError = ex.InnerException?.Message
+                });
+            }
+        }
     }
 }

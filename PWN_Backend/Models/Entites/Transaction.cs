@@ -26,11 +26,20 @@ namespace PWN_Backend.Models.Entites
         public string? Note { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
-
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
         // 關聯屬性 (導覽屬性) - 這能讓 EF Core 自動幫你處理 Join 邏輯
         public string UserId { get; set; } = string.Empty;
 
-        [ForeignKey("UserId")]
-        public virtual User User { get; set; } = null!;
+        // 股票交易欄位
+        [StringLength(20)]
+        [Column(TypeName = "nvarchar(20)")]
+        public string? Symbol { get; set; }
+
+        public int? Quantity { get; set; }
+
+        [Column(TypeName = "decimal(18,4)")]
+        public decimal? Price { get; set; }
+      
+
     }
 }

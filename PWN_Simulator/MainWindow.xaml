@@ -6,13 +6,13 @@
         xmlns:local="clr-namespace:PWN_Simulator"
         xmlns:vm="clr-namespace:PWN_Simulator.ViewModel"
         mc:Ignorable="d"
-        Title="PWN_Simulator" Height="450" Width="800">
+        Title="PWN_Simulator" Height="745" Width="800">
     <Window.DataContext>
         <vm:MainViewModel x:Name="ViewModel"/>
     </Window.DataContext>
     <StackPanel Margin="20">
         <TextBlock Text="股票代碼：" />
-        <TextBox x:Name="TxtSymbol" Text="0050.TW" Margin="0,5"/>
+        <TextBox x:Name="TxtSymbol" Text="0050" Margin="0,5"/>
 
         <Button Content="查詢資產概況" Click="BtnRefresh_Click" Margin="0,10" Height="30"/>
 
@@ -31,5 +31,72 @@
                            FontSize="10" Foreground="DimGray" Margin="0,10,0,0"/>
             </StackPanel>
         </Border>
+        <GroupBox Header="AI Transaction Assistant" Margin="0,20,0,0">
+            <StackPanel Margin="12">
+
+                <TextBlock Text="請輸入交易內容："
+                   FontWeight="Bold"
+                   Margin="0,0,0,6"/>
+
+                <TextBox Text="{Binding AIInputMessage, UpdateSourceTrigger=PropertyChanged}"
+                 Height="80"
+                 TextWrapping="Wrap"
+                 AcceptsReturn="True"
+                 VerticalScrollBarVisibility="Auto"
+                 Margin="0,0,0,10"/>
+
+                <Button Content="AI 解析"
+                Command="{Binding AskAICommand}"
+                Width="120"
+                Height="32"
+                HorizontalAlignment="Left"
+                Margin="0,0,0,10"/>
+
+                <TextBlock Text="{Binding AIReply}"
+                   TextWrapping="Wrap"
+                   Foreground="DarkSlateBlue"
+                   Margin="0,0,0,12"/>
+
+                <Border BorderBrush="LightGray"
+                BorderThickness="1"
+                Padding="10"
+                CornerRadius="5"
+                Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Type:" FontWeight="Bold"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ParsedResult.Action}"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Symbol:" FontWeight="Bold"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ParsedResult.Symbol}"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Quantity:" FontWeight="Bold"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ParsedResult.Quantity}"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Price:" FontWeight="Bold"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ParsedResult.Price}"/>
+                    </Grid>
+                </Border>
+
+                <Button Content="Confirm Save"
+                Command="{Binding ConfirmTransactionCommand}"
+                IsEnabled="{Binding CanConfirmTransaction}"
+                Width="140"
+                Height="32"
+                HorizontalAlignment="Left"/>
+
+            </StackPanel>
+        </GroupBox>
     </StackPanel>
 </Window>
